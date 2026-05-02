@@ -1,6 +1,6 @@
-name: astrbot_plugin_chuan
-display_name: 迷你世界查询
-desc: Chuan出品，查询迷你世界玩家完整档案与作品列表。
+name: astrbot_plugin_miniworld
+display_name: Chuan 迷你世界查询
+desc: 由 Chuan 制作的迷你世界查询小工具，直接在QQ里查玩家资料和地图。详细用法见 /help。仓库：github.com/moranby/Chuan
 version: v2.0.0
 author: Chuan
 repo: https://github.com/moranby/Chuan
