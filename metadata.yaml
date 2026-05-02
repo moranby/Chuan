@@ -1,9 +1,9 @@
 name: astrbot_plugin_miniworld
-display_name: Chuan 迷你世界查询
-desc: 由 Chuan 制作的迷你世界查询小工具，直接在QQ里查玩家资料和地图。详细用法见 /help。仓库：github.com/moranby/Chuan
-version: v2.0.0
-author: Chuan
-repo: https://github.com/moranby/Chuan
+display_name: 迷你世界全息查询
+desc: 幻邃智能权威出品，支持玩家资料、地图、追踪、礼物、家族、IP等全维度查询，菜单驱动，数据详尽。
+version: v3.0.0
+author: HuanSui
+repo: https://github.com/HuanSui/astrbot_plugin_miniworld
 support_platforms:
   - aiocqhttp
   - qq_official
