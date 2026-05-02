@@ -16,23 +16,27 @@ class MiniWorldPlugin(Star):
     async def initialize(self):
         logger.info("[Chuan] 迷你世界查询引擎启动 | moranby/Chuan")
 
+    # 辅助方法：从消息中提取指令和迷你号
     def _parse_input(self, msg: str, cmd_aliases: list):
         """从消息中提取指令词和迷你号，支持无空格输入"""
         msg = msg.strip()
+        # 先尝试按空格分割
         parts = msg.split()
         if len(parts) >= 2:
             cmd = parts[0]
             uid = parts[1]
             return cmd, uid
+        # 如果没空格，尝试从字符串中分离指令和ID（例如：查询1712894764）
         match = re.match(r'^(.*?)(\d+)$', msg)
         if match:
             cmd = match.group(1).strip()
             uid = match.group(2).strip()
+            # 检查分离出来的指令词是否在别名列表中
             if cmd in cmd_aliases:
                 return cmd, uid
         return msg, None
 
-    # ── 指令：/查询 (多别名) ──
+    # ── 指令：/查询 (多别名 & 无空格输入) ──
     @filter.command("查询")
     @filter.command("cx")
     @filter.command("查询用户")
@@ -40,6 +44,8 @@ class MiniWorldPlugin(Star):
     @filter.command("迷你号查询")
     @filter.command("用户查询")
     async def query_profile(self, event: AstrMessageEvent):
+        """查询迷你世界用户完整资料，支持别名：cx、查询用户 等。用法：/查询 <迷你号>"""
+        # 提取指令词和迷你号（支持无空格输入）
         cmd_aliases = ["查询", "cx", "查询用户", "查询迷你号", "迷你号查询", "用户查询"]
         cmd, uid = self._parse_input(event.message_str, cmd_aliases)
 
@@ -58,6 +64,7 @@ class MiniWorldPlugin(Star):
                 return
             user = profile_data["data"]
 
+            # 处理地图数据（用于修正统计）
             maps_ok = False
             total_maps = 0
             total_dl = 0
@@ -74,53 +81,55 @@ class MiniWorldPlugin(Star):
             yield event.plain_result("⚠️ 查询服务暂时不可用，请稍后重试")
             return
 
+        # 时间戳转换
         def ts2str(ts):
             try:
                 return datetime.fromtimestamp(int(ts)).strftime("%Y-%m-%d %H:%M:%S")
             except:
                 return str(ts) if ts else "未知"
 
+        # 数字美化（千位分隔）
         def fmt(n):
             try:
                 return f"{int(n):,}"
             except:
                 return str(n)
 
-        map_count = total_maps if maps_ok else user.get("map_total_count", 0)
-        map_dl = total_dl if maps_ok else user.get("map_download_count", 0)
-        map_like = total_like if maps_ok else user.get("map_like_count", 0)
-        map_visit = user.get("map_visit_count", 0)
+        # 优先使用地图列表统计值，比接口字段更可靠
+        map_count = total_maps if maps_ok else user.get('map_total_count', 0)
+        map_dl = total_dl if maps_ok else user.get('map_download_count', 0)
+        map_like = total_like if maps_ok else user.get('map_like_count', 0)
+        map_visit = user.get('map_visit_count', 0)
 
-        # 修正：将多行 f-string 拆分为独立行，避免跨行引号闭合错误
-        line1 = f"📇 迷你世界用户档案\n"
-        line2 = f"━━━━━━━━━━━━━━━━━━\n"
-        line3 = f"🆔 迷你号：{user.get('uin', uid)}\n"
-        line4 = f"👤 昵称：{user.get('name', '未知')}\n"
-        line5 = f"⭐ 等级：{user.get('level', 0)}\n"
-        line6 = f"⚧ 性别：{user.get('gender', '未知')}\n"
-        line7 = f"📅 注册时间：{ts2str(user.get('create_time'))}\n"
-        line8 = f"🕒 最后登录：{ts2str(user.get('last_login_time'))}\n"
-        line9 = f"💬 个性签名：{user.get('mood_text', '这个人很懒，什么都没留下')}\n"
-        line10 = f"━━━━━━━━━━━━━━━━━━\n"
-        line11 = f"👥 社交数据\n"
-        line12 = f"  好友：{fmt(user.get('friend_num',0))}  关注：{fmt(user.get('follow_num',0))}  粉丝：{fmt(user.get('fans_num',0))}\n"
-        line13 = f"  待处理申请：{fmt(user.get('friend_beapply',0))}\n"
-        line14 = f"━━━━━━━━━━━━━━━━━━\n"
-        line15 = f"🗺️ 创作数据 {'(实时统计)' if maps_ok else ''}\n"
-        line16 = f"  地图总数：{fmt(map_count)}\n"
-        line17 = f"  总下载量：{fmt(map_dl)}\n"
-        line18 = f"  总获赞：{fmt(map_like)}\n"
-        line19 = f"  地图访问量：{fmt(map_visit)}\n"
-        line20 = f"━━━━━━━━━━━━━━━━━━\n"
-        line21 = f"🎨 其他信息\n"
-        line22 = f"  头像框数量：{fmt(user.get('avatar_frame_count',0))}\n"
-        line23 = f"  人气值：{fmt(user.get('popularity',0))}\n"
-        line24 = f"━━━━━━━━━━━━━━━━━━\n"
-        line25 = f"⚡ 查询引擎：Chuan | github.com/moranby/Chuan"
-
-        msg = (line1 + line2 + line3 + line4 + line5 + line6 + line7 + line8 + line9 +
-               line10 + line11 + line12 + line13 + line14 + line15 + line16 + line17 +
-               line18 + line19 + line20 + line21 + line22 + line23 + line24 + line25)
+        # 修复与优化：使用列表和 "\n".join() 显式拼接，规避隐式多行 f-string 带来的语法解析错误
+        msg_lines = [
+            "💫 查询结果",
+            "━━━━━━━━━━━━━━━━━━",
+            f"🆔 迷你号：{user.get('uin', uid)}",
+            f"👤 昵称：{user.get('name', '未知')}",
+            f"⭐ 等级：{user.get('level', 0)}",
+            f"⚧ 性别：{user.get('gender', '未知')}",
+            f"📅 注册时间：{ts2str(user.get('create_time'))}",
+            f"🕒 最后登录：{ts2str(user.get('last_login_time'))}",
+            f"💬 个性签名：{user.get('mood_text', '这个人很懒，什么都没留下')}",
+            "━━━━━━━━━━━━━━━━━━",
+            "👥 社交数据",
+            f"  好友：{fmt(user.get('friend_num', 0))}  关注：{fmt(user.get('follow_num', 0))}  粉丝：{fmt(user.get('fans_num', 0))}",
+            f"  待处理申请：{fmt(user.get('friend_beapply', 0))}",
+            "━━━━━━━━━━━━━━━━━━",
+            f"🗺️ 创作数据 {'(实时统计)' if maps_ok else ''}",
+            f"  地图总数：{fmt(map_count)}",
+            f"  总下载量：{fmt(map_dl)}",
+            f"  总获赞：{fmt(map_like)}",
+            f"  地图访问量：{fmt(map_visit)}",
+            "━━━━━━━━━━━━━━━━━━",
+            "🎨 其他信息",
+            f"  头像框数量：{fmt(user.get('avatar_frame_count', 0))}",
+            f"  人气值：{fmt(user.get('popularity', 0))}",
+            "━━━━━━━━━━━━━━━━━━",
+            "⚡ 查询引擎：Chuan "
+        ]
+        msg = "\n".join(msg_lines)
 
         avatar = user.get("avatar", "")
         if avatar:
@@ -135,6 +144,7 @@ class MiniWorldPlugin(Star):
     @filter.command("cxmap")
     @filter.command("map")
     async def query_maps(self, event: AstrMessageEvent):
+        """查询用户发布的地图列表，支持别名：地图查询、cx地图 等。用法：/查询地图 <迷你号>"""
         cmd_aliases = ["查询地图", "地图查询", "cx地图", "cxmap", "map"]
         cmd, uid = self._parse_input(event.message_str, cmd_aliases)
 
@@ -160,13 +170,18 @@ class MiniWorldPlugin(Star):
         limit = min(len(maps), 10)
         lines = [f"🗺️ 地图统计 (共 {len(maps)} 个，显示前 {limit} 个)"]
         for i, m in enumerate(maps[:limit], 1):
+            # 修复 [] 空内容：当有 season 信息时才显示
             season_str = f"  [赛季:{m.get('season')}]" if m.get('season') else ""
-            lines.append(
-                f"\n{i}. {m.get('name', '未知')}{season_str}\n"
-                f"   📥 下载：{m.get('download_count',0)}  👍 点赞：{m.get('like',0)}  👎 踩：{m.get('dislike',0)}\n"
-                f"   📅 创建：{m.get('create_time','未知')}  💾 大小：{m.get('size','未知')}"
-            )
-        lines.append("\n━━━━━━━━━━━━━━━━━━\n⚡ 查询引擎：Chuan | github.com/moranby/Chuan")
+            
+            # 同步优化：放弃括号隐式拼接，改用 join 显式拼接
+            map_info = "\n".join([
+                f"\n{i}. {m.get('name', '未知')}{season_str}",
+                f"   📥 下载：{m.get('download_count', 0)}  👍 点赞：{m.get('like', 0)}  👎 踩：{m.get('dislike', 0)}",
+                f"   📅 创建：{m.get('create_time', '未知')}  💾 大小：{m.get('size', '未知')}"
+            ])
+            lines.append(map_info)
+
+        lines.append("\n━━━━━━━━━━━━━━━━━━\n⚡ 查询引擎：Chuan ")
         yield event.plain_result("".join(lines))
 
     async def terminate(self):
